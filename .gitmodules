@@ -1,0 +1,18 @@
+[submodule "blinkzero"]
+	path = blinkzero
+	url = https://github.com/bakayu/blinkzero.git
+[submodule "bopp"]
+	path = bopp
+	url = https://github.com/bakayu/bopp.git
+[submodule "lpadmin-rs"]
+	path = lpadmin-rs
+	url = https://github.com/bakayu/lpadmin-rs.git
+[submodule "lpinfo-rs"]
+	path = lpinfo-rs
+	url = https://github.com/bakayu/lpinfo-rs.git
+[submodule "rustlings-solutions"]
+	path = rustlings-solutions
+	url = https://github.com/bakayu/rustlings-solutions.git
+[submodule "velo"]
+	path = velo
+	url = https://github.com/bakayu/velo.git
