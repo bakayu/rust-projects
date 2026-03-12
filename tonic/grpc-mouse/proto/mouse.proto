@@ -1,0 +1,23 @@
+// mouse.proto
+syntax = "proto3";
+package mouse;
+
+// A single service that collects mouse preference reports
+// and returns a summary once the stream is complete
+service MousePreference {
+    // Client streaming - the client sends multiple reports,
+    // the server responds once at the end
+    rpc ReportPreference (stream PreferenceReport) returns (PreferenceSummary);
+}
+
+// A single preference report sent by the client
+message PreferenceReport {
+    string name          = 1;
+    bool   is_city_mouse = 2;
+}
+
+// The server's response after the stream closes
+message PreferenceSummary {
+    bool   received = 1;
+    string message  = 2;
+}
