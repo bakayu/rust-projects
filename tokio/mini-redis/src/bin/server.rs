@@ -73,8 +73,6 @@ fn new_sharded_db(num_shards: usize) -> ShardedDb {
 
 /// Get Mutex of the destination shard from a ShardedDb
 fn shard_for<'a, K: Hash + ?Sized>(db: &'a ShardedDb, key: &K) -> &'a Mutex<HashMap<String, Bytes>>
-where
-    K: Hash,
 {
     let mut hasher = DefaultHasher::new();
     key.hash(&mut hasher);
@@ -99,7 +97,7 @@ async fn process(socket: TcpStream, db: ShardedDb) {
                 if let Some(value) = db_shard.get(cmd.key()) {
                     // `Frame::Bulk` expects data to be of type `Bytes`.
                     // `&Vec<u8>` is coverted to `Bytes` using `into()`
-                    Frame::Bulk(value.clone().into())
+                    Frame::Bulk(value.clone())
                 } else {
                     Frame::Null
                 }
