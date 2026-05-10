@@ -1,8 +1,37 @@
 use std::{fs::File, io, thread, time::Duration};
 
+use chrono::{DateTime, Utc};
 use futures_util::StreamExt;
 use inotify::{Inotify, WatchMask};
 use tempfile::TempDir;
+
+pub enum LogFormat {
+    Plain,
+    DockerJson,
+}
+
+pub struct LogEntry {
+    pub line: String,
+    pub stream: Stream,
+    pub timestamp: DateTime<Utc>,
+}
+
+pub enum Stream {
+    Stdout,
+    Stderr,
+}
+
+pub struct LogBatch {
+    pub source: String,
+    pub entries: Vec<LogEntry>,
+}
+
+pub fn parse_line(raw: &str, format: &LogFormat) -> Option<LogEntry> {
+    match format {
+        LogFormat::Plain => todo!(),
+        LogFormat::DockerJson => todo!(),
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
