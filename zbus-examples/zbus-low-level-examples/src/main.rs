@@ -1,32 +1,45 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use zbus::{Connection, zvariant::Value};
+use zbus::{Connection, proxy, zvariant::Value};
+
+#[proxy(
+    default_service = "org.freedesktop.Notifications",
+    default_path = "/org/freedesktop/Notifications"
+)]
+trait Notifications {
+    /// Call the org.freedesktop.Notifications.Notify D-Bus method
+    fn notify(
+        &self,
+        app_name: &str,
+        replaces_id: u32,
+        app_icon: &str,
+        summary: &str,
+        body: &str,
+        actions: &[&str],
+        hints: HashMap<&str, &Value<'_>>,
+        expire_timeout: i32,
+    ) -> zbus::Result<u32>;
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
 
-    let m = connection
-        .call_method(
-            Some("org.freedesktop.Notifications"),
-            "/org/freedesktop/Notifications",
-            Some("org.freedesktop.Notifications"),
-            "Notify",
-            &(
-                "notification from zbus",
-                0u32,
-                "notification from zbus",
-                "Hello from zbus",
-                "Hello from zbus",
-                vec![""; 0],
-                HashMap::<&str, &Value>::new(),
-                5000,
-            ),
+    let proxy = NotificationsProxy::new(&connection).await?;
+    let reply = proxy
+        .notify(
+            "Notification from zbus",
+            0,
+            "dialog-information",
+            "Hello from zbus",
+            "Hello from zbus",
+            &[],
+            HashMap::new(),
+            5000,
         )
         .await?;
-
-    let reply: u32 = m.body().deserialize().unwrap();
     dbg!(reply);
+
     Ok(())
 }
