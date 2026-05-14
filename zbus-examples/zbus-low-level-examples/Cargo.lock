@@ -1034,6 +1034,7 @@ dependencies = [
 name = "zbus-low-level-examples"
 version = "0.1.0"
 dependencies = [
+ "event-listener",
  "futures-util",
  "tokio",
  "zbus",

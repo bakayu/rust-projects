@@ -1,30 +1,64 @@
-use futures_util::stream::TryStreamExt;
-use zbus::{Connection, Result};
+use event_listener::{Event, Listener};
+use zbus::{Result, connection::Builder, fdo, interface, object_server::SignalEmitter};
+
+struct Greeter {
+    name: String,
+    done: Event,
+}
+
+#[interface(name = "org.zbus.Greeter1")]
+impl Greeter {
+    async fn say_hello(&self, name: &str) -> String {
+        format!("Hello {}!", name)
+    }
+
+    async fn go_away(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) -> fdo::Result<()> {
+        emitter.greeted_everyone().await?;
+        self.done.notify(1);
+
+        Ok(())
+    }
+
+    /// A "GreeterName" property.
+    #[zbus(property)]
+    async fn greeter_name(&self) -> &str {
+        &self.name
+    }
+
+    /// A setter for the "GreeterName" property.
+    ///
+    /// Additionally, a `greeter_name_changed` method gets generated for notifying listners
+    /// that "GreeterName" was updated. It will be automatically called when using this setter.
+    #[zbus(property)]
+    async fn set_greeter_name(&mut self, name: String) {
+        self.name = name;
+    }
+
+    /// A signal - the implementation is provided by the macro
+    #[zbus(signal)]
+    async fn greeted_everyone(emitter: &SignalEmitter<'_>) -> Result<()>;
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let connection = Connection::session().await?;
-    let mut stream = zbus::MessageStream::from(&connection);
-    connection.request_name("org.zbus.Greeter").await?;
+    let greeter = Greeter {
+        name: "ZbusGreeter".to_string(),
+        done: event_listener::Event::new(),
+    };
+    let done_listener = greeter.done.listen();
+    let connection = Builder::session()?
+        .name("org.zbus.Greeter")?
+        .serve_at("/org/zbus/Greeter", greeter)?
+        .build()
+        .await?;
+    done_listener.wait();
 
-    while let Some(msg) = stream.try_next().await? {
-        let msg_header = msg.header();
-        dbg!(&msg);
-
-        match msg_header.message_type() {
-            zbus::message::Type::MethodCall => {
-                let header = msg.header();
-                let body = msg.body();
-                let arg: &str = body.deserialize()?;
-                connection
-                    .reply(&header, &(format!("Hello {}!", arg)))
-                    .await?;
-
-                // break;
-            }
-            _ => continue,
-        }
-    }
+    connection
+        .object_server()
+        .interface("/org/zbus/Greeter")
+        .await?
+        .greeted_everyone()
+        .await?;
 
     Ok(())
 }
