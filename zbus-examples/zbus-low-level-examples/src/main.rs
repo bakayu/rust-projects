@@ -1,45 +1,30 @@
-use std::collections::HashMap;
-use std::error::Error;
-
-use zbus::{Connection, proxy, zvariant::Value};
-
-#[proxy(
-    default_service = "org.freedesktop.Notifications",
-    default_path = "/org/freedesktop/Notifications"
-)]
-trait Notifications {
-    /// Call the org.freedesktop.Notifications.Notify D-Bus method
-    fn notify(
-        &self,
-        app_name: &str,
-        replaces_id: u32,
-        app_icon: &str,
-        summary: &str,
-        body: &str,
-        actions: &[&str],
-        hints: HashMap<&str, &Value<'_>>,
-        expire_timeout: i32,
-    ) -> zbus::Result<u32>;
-}
+use futures_util::stream::TryStreamExt;
+use zbus::{Connection, Result};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     let connection = Connection::session().await?;
+    let mut stream = zbus::MessageStream::from(&connection);
+    connection.request_name("org.zbus.Greeter").await?;
 
-    let proxy = NotificationsProxy::new(&connection).await?;
-    let reply = proxy
-        .notify(
-            "Notification from zbus",
-            0,
-            "dialog-information",
-            "Hello from zbus",
-            "Hello from zbus",
-            &[],
-            HashMap::new(),
-            5000,
-        )
-        .await?;
-    dbg!(reply);
+    while let Some(msg) = stream.try_next().await? {
+        let msg_header = msg.header();
+        dbg!(&msg);
+
+        match msg_header.message_type() {
+            zbus::message::Type::MethodCall => {
+                let header = msg.header();
+                let body = msg.body();
+                let arg: &str = body.deserialize()?;
+                connection
+                    .reply(&header, &(format!("Hello {}!", arg)))
+                    .await?;
+
+                // break;
+            }
+            _ => continue,
+        }
+    }
 
     Ok(())
 }
